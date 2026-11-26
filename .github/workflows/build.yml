@@ -15,48 +15,83 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install OpenCV via Chocolatey
+      - name: Install OpenCV
         shell: pwsh
         run: |
-          choco install opencv --version=4.8.0 -y --no-progress
+          choco install opencv --version=4.13.0 -y --no-progress
 
       - name: Locate OpenCV
         shell: pwsh
         run: |
-          $cmakeFile = Get-ChildItem -Path C:\tools\opencv -Recurse -Filter OpenCVConfig.cmake -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $cmakeFile) { throw "OpenCVConfig.cmake not found" }
-          $dir = $cmakeFile.DirectoryName
-          Write-Output "OpenCV_DIR=$dir" >> $env:GITHUB_ENV
+          $config = Get-ChildItem C:\tools\opencv -Recurse `
+            -Filter OpenCVConfig.cmake |
+            Where-Object {
+              $_.FullName -match '\\x64\\vc17\\lib\\OpenCVConfig.cmake$'
+            } | Select-Object -First 1
+
+          if (-not $config) {
+            $config = Get-ChildItem C:\tools\opencv `
+              -Recurse -Filter OpenCVConfig.cmake |
+              Where-Object {
+                $_.FullName -match '\\build\\OpenCVConfig.cmake$'
+              } | Select-Object -First 1
+          }
+
+          if (-not $config) {
+            throw "OpenCVConfig.cmake not found"
+          }
+
+          $dir = $config.DirectoryName
+
+          "OpenCV_DIR=$dir" >> $env:GITHUB_ENV
+
           Write-Host "OpenCV_DIR=$dir"
+          Write-Host "Config: $($config.FullName)"
+
+          Get-ChildItem C:\tools\opencv\build\x64 -Directory |
+            Format-Table Name, FullName
 
       - name: Configure CMake
         shell: pwsh
         run: |
           cmake -S . -B build `
-                -A x64 `
-                -DCMAKE_BUILD_TYPE=Release `
-                -DOpenCV_DIR="$env:OpenCV_DIR"
+            -A x64 `
+            -DOpenCV_DIR="$env:OpenCV_DIR"
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config Release --parallel
+        run: |
+          cmake --build build `
+            --config Release --parallel
 
       - name: Stage artifacts
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path stage | Out-Null
-          Copy-Item build\Release\aimbot.exe stage\
-          if (Test-Path build\Release\config.ini) { Copy-Item build\Release\config.ini stage\ }
-          if (Test-Path config\best.onnx) { Copy-Item config\best.onnx stage\ }
 
-          # Copy all OpenCV runtime DLLs
-          $dlls = Get-ChildItem -Path C:\tools\opencv -Recurse -Filter "opencv_world*.dll" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "x64" -and $_.FullName -match "vc16\\bin" }
-          if ($dlls) {
-            $dlls | Select-Object -First 1 | Copy-Item -Destination stage\
-            Write-Host "Copied: $($dlls[0].FullName)"
-          } else {
-            Write-Warning "OpenCV runtime DLL not found"
+          Copy-Item build\Release\aimbot.exe stage\
+
+          if (Test-Path build\Release\config.ini) {
+            Copy-Item build\Release\config.ini stage\
           }
+
+          if (Test-Path config\best.onnx) {
+            Copy-Item config\best.onnx stage\
+          }
+
+          # Locate OpenCV runtime DLL
+          $dlls = Get-ChildItem C:\tools\opencv\build\x64 `
+            -Recurse -Filter "opencv_world*.dll" |
+            Sort-Object FullName
+
+          if (-not $dlls) {
+            throw "OpenCV runtime DLL not found"
+          }
+
+          $dlls | Select-Object -First 1 |
+            Copy-Item -Destination stage\
+
+          Write-Host "OpenCV DLL: $($dlls[0].FullName)"
 
           Write-Host "Staged files:"
           Get-ChildItem stage | Format-Table
