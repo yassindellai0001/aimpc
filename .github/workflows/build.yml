@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install OpenCV via Chocolatey
+        shell: pwsh
+        run: |
+          choco install opencv --version=4.8.0 -y --no-progress
+
+      - name: Locate OpenCV
+        shell: pwsh
+        run: |
+          $cmakeFile = Get-ChildItem -Path C:\tools\opencv -Recurse -Filter OpenCVConfig.cmake -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $cmakeFile) { throw "OpenCVConfig.cmake not found" }
+          $dir = $cmakeFile.DirectoryName
+          Write-Output "OpenCV_DIR=$dir" >> $env:GITHUB_ENV
+          Write-Host "OpenCV_DIR=$dir"
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+                -G "Visual Studio 17 2022" -A x64 `
+                -DCMAKE_BUILD_TYPE=Release `
+                -DOpenCV_DIR="$env:OpenCV_DIR"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path stage | Out-Null
+          Copy-Item build\Release\aimbot.exe stage\
+          if (Test-Path build\Release\config.ini) { Copy-Item build\Release\config.ini stage\ }
+          if (Test-Path config\best.onnx) { Copy-Item config\best.onnx stage\ }
+
+          # Copy all OpenCV runtime DLLs
+          $dlls = Get-ChildItem -Path C:\tools\opencv -Recurse -Filter "opencv_world*.dll" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "x64" -and $_.FullName -match "vc16\\bin" }
+          if ($dlls) {
+            $dlls | Select-Object -First 1 | Copy-Item -Destination stage\
+            Write-Host "Copied: $($dlls[0].FullName)"
+          } else {
+            Write-Warning "OpenCV runtime DLL not found"
+          }
+
+          Write-Host "Staged files:"
+          Get-ChildItem stage | Format-Table
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aimbot-windows-x64
+          path: stage/
+          if-no-files-found: error
