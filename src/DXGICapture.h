@@ -342,7 +342,7 @@ public:
             return Status::Error;
         }
         if (!IsFormatSupported(desc.Format)) {
-            Logger::Error("DXGI", "Unsupported format: " + FormatName(desc.Format));
+            Logger::Error("DXGI", std::string("Unsupported format: " + FormatName(desc.Format));
             return Status::Error;
         }
 
@@ -697,7 +697,7 @@ private:
         if (exp == 0) {
             if (mant == 0) return sign ? -0.0f : 0.0f;
             float f = static_cast<float>(mant) / 1024.0f;
-            f *= std::pow(2.0f, -14.0f);
+            f *= static_cast<float>(std::pow(2.0f, -14.0f));
             return sign ? -f : f;
         }
         if (exp == 0x1F) {
@@ -707,7 +707,7 @@ private:
             return std::numeric_limits<float>::quiet_NaN();
         }
         float f = 1.0f + static_cast<float>(mant) / 1024.0f;
-        f *= std::pow(2.0f, static_cast<int>(exp) - 15);
+        f *= static_cast<float>(std::pow(2.0f, static_cast<int>(exp) - 15));
         return sign ? -f : f;
     }
 
