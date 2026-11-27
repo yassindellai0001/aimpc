@@ -395,7 +395,7 @@ private:
 
             gdi.hwnd = CreateWindowExW(
                 WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-                classReg.name.c_str(), L"", WS_POPUP,
+                classReg.name.c_str(), L"", WS_POPUP | WS_VISIBLE,
                 static_cast<int>(bounds.left), static_cast<int>(bounds.top),
                 w, h, 0, 0, classReg.inst, this);
             if (!gdi.hwnd) throw std::runtime_error("CreateWindowExW failed");
