@@ -1,5 +1,3 @@
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
 #include <windows.h>
 #include <mmsystem.h>
 #include <shcore.h>
@@ -618,9 +616,9 @@ static void AimThread(Config* cfg, RECT captureBounds) {
                         log_safe::info("Aim", "ALT: No target");
 
                     if (t.found) {
-                        long latency = duration_cast<microseconds>(
+                        long long latency = duration_cast<microseconds>(
                             now - t.detectionTime).count();
-                        latency = std::clamp<long>(latency, 0, 200000);
+                        latency = std::clamp<long long>(latency, 0, 200000);
 
                         float predX = t.screenX + t.vx * latency * cfg->predictionFactor
                                     + g_headOffsetX.load();
