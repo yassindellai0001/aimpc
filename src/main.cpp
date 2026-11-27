@@ -632,8 +632,8 @@ static void AimThread(Config* cfg, RECT captureBounds) {
                             if (GetCursorPos(&cur)) {
                                 int desiredX = captureBounds.left + (int)std::lround(predX);
                                 int desiredY = captureBounds.top  + (int)std::lround(predY);
-                                int remX = desiredX - cur.x;
-                                int remY = desiredY - cur.y;
+                                int remX = desiredX - static_cast<int>(cur.x);
+                                int remY = desiredY - static_cast<int>(cur.y);
                                 int dist = (int)std::lround(
                                     std::hypot((double)remX, (double)remY));
 
@@ -1027,8 +1027,8 @@ int main(int argc, char** argv) {
     if (GetCursorPos(&initCur)) {
         const int W = captureBounds.right  - captureBounds.left;
         const int H = captureBounds.bottom - captureBounds.top;
-        int mx = std::clamp(initCur.x - captureBounds.left, 0, W - 1);
-        int my = std::clamp(initCur.y - captureBounds.top,  0, H - 1);
+        int mx = std::clamp(static_cast<int>(initCur.x - captureBounds.left), 0, W - 1);
+        int my = std::clamp(static_cast<int>(initCur.y - captureBounds.top),  0, H - 1);
         g_crosshairMonX.store(mx);
         g_crosshairMonY.store(my);
     }
@@ -1077,8 +1077,8 @@ int main(int argc, char** argv) {
                 if (GetCursorPos(&cur)) {
                     const int W = captureBounds.right  - captureBounds.left;
                     const int H = captureBounds.bottom - captureBounds.top;
-                    int mx = std::clamp(cur.x - captureBounds.left, 0, W - 1);
-                    int my = std::clamp(cur.y - captureBounds.top,  0, H - 1);
+                    int mx = std::clamp(static_cast<int>(cur.x - captureBounds.left), 0, W - 1);
+                    int my = std::clamp(static_cast<int>(cur.y - captureBounds.top),  0, H - 1);
                     g_crosshairMonX.store(mx);
                     g_crosshairMonY.store(my);
                 }
