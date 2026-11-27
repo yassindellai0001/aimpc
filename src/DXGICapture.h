@@ -328,55 +328,55 @@ public:
             return Status::Error;
         }
 
-        D3D11_TEXTURE2D_DESC desc{};
-        acquired->GetDesc(&desc);
+       D3D11_TEXTURE2D_DESC desc{};
+acquired->GetDesc(&desc);
 
-        if (desc.Width == 0 || desc.Height == 0 ||
-            desc.Width > 16384 || desc.Height > 16384) {
-            Logger::Error("DXGI", "Invalid dimensions: " +
-                std::to_string(desc.Width) + "x" + std::to_string(desc.Height));
-            return Status::Error;
-        }
-        if (desc.SampleDesc.Count > 1) {
-            Logger::Error("DXGI", "Unexpected MSAA texture");
-            return Status::Error;
-        }
-        if (!IsFormatSupported(desc.Format)) {
-            Logger::Error("DXGI", std::string("Unsupported format: " + FormatName(desc.Format));
-            return Status::Error;
-        }
+if (desc.Width == 0 || desc.Height == 0 ||
+    desc.Width > 16384 || desc.Height > 16384) {
+    Logger::Error("DXGI", "Invalid dimensions: " +
+        std::to_string(desc.Width) + "x" + std::to_string(desc.Height));
+    return Status::Error;
+}
+if (desc.SampleDesc.Count > 1) {
+    Logger::Error("DXGI", "Unexpected MSAA texture");
+    return Status::Error;
+}
+if (!IsFormatSupported(desc.Format)) {
+    Logger::Error("DXGI", std::string("Unsupported format: ") + FormatName(desc.Format));
+    return Status::Error;
+}
 
-        if (!m_StagingTex ||
-            m_StagingWidth  != desc.Width ||
-            m_StagingHeight != desc.Height ||
-            m_StagingFormat != desc.Format) {
+if (!m_StagingTex ||
+    m_StagingWidth  != desc.Width ||
+    m_StagingHeight != desc.Height ||
+    m_StagingFormat != desc.Format) {
 
-            m_StagingTex.Reset();
-            m_StagingWidth  = 0;
-            m_StagingHeight = 0;
-            m_StagingFormat = DXGI_FORMAT_UNKNOWN;
+    m_StagingTex.Reset();
+    m_StagingWidth  = 0;
+    m_StagingHeight = 0;
+    m_StagingFormat = DXGI_FORMAT_UNKNOWN;
 
-            D3D11_TEXTURE2D_DESC sdesc = desc;
-            sdesc.Usage          = D3D11_USAGE_STAGING;
-            sdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            sdesc.BindFlags      = 0;
-            sdesc.MiscFlags      = 0;
-            sdesc.ArraySize      = 1;
-            sdesc.MipLevels      = 1;
-            sdesc.SampleDesc.Count   = 1;
-            sdesc.SampleDesc.Quality = 0;
+    D3D11_TEXTURE2D_DESC sdesc = desc;
+    sdesc.Usage          = D3D11_USAGE_STAGING;
+    sdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    sdesc.BindFlags      = 0;
+    sdesc.MiscFlags      = 0;
+    sdesc.ArraySize      = 1;
+    sdesc.MipLevels      = 1;
+    sdesc.SampleDesc.Count   = 1;
+    sdesc.SampleDesc.Quality = 0;
 
-            hr = m_Device->CreateTexture2D(&sdesc, nullptr, m_StagingTex.GetAddressOf());
-            if (FAILED(hr)) {
-                if (hr == DXGI_ERROR_DEVICE_REMOVED || IsDeviceRemovedLocked())
-                    return Status::DeviceRemoved;
-                Logger::Error("DXGI", "CreateTexture2D failed", hr);
-                return Status::Error;
-            }
-            m_StagingWidth  = desc.Width;
-            m_StagingHeight = desc.Height;
-            m_StagingFormat = desc.Format;
-        }
+    hr = m_Device->CreateTexture2D(&sdesc, nullptr, m_StagingTex.GetAddressOf());
+    if (FAILED(hr)) {
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || IsDeviceRemovedLocked())
+            return Status::DeviceRemoved;
+        Logger::Error("DXGI", "CreateTexture2D failed", hr);
+        return Status::Error;
+    }
+    m_StagingWidth  = desc.Width;
+    m_StagingHeight = desc.Height;
+    m_StagingFormat = desc.Format;
+}
 
         m_Context->CopyResource(m_StagingTex.Get(), acquired.Get());
         if (IsDeviceRemovedLocked()) {
